@@ -24,8 +24,14 @@ const io = new Server(server, {
   },
 });
 
-// Connect MongoDB
+// Connect MongoDB on app initialization
 connectDB();
+
+// Ensure DB connection on each request in serverless environments
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Middleware
 app.use(
@@ -74,8 +80,11 @@ io.on("connection", (socket) => {
 // Make io available to controllers later
 app.set("io", io);
 
-const PORT = process.env.PORT || 5000;
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+module.exports = app;
