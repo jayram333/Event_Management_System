@@ -14,13 +14,37 @@ const notificationRoutes = require("./routes/notificationRoutes");
 
 console.log("EMAIL_USER loaded:", !!process.env.EMAIL_USER);
 console.log("EMAIL_PASSWORD loaded:", !!process.env.EMAIL_PASSWORD);
+const allowedOrigins = [
+  "https://event-management-system-frontend-eta.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:5000",
+];
+
+if (process.env.CLIENT_URL) {
+  const cleanClientUrl = process.env.CLIENT_URL.trim().replace(/\/$/, "");
+  if (cleanClientUrl && !allowedOrigins.includes(cleanClientUrl)) {
+    allowedOrigins.push(cleanClientUrl);
+  }
+}
+
+const checkOrigin = (origin, callback) => {
+  if (!origin) return callback(null, true);
+  const clean = origin.replace(/\/$/, "");
+  if (allowedOrigins.some((o) => o.replace(/\/$/, "") === clean)) {
+    return callback(null, true);
+  }
+  return callback(null, false);
+};
+
 const app = express();
 const server = http.createServer(app);
 // Socket.IO
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: checkOrigin,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
   },
 });
 
@@ -36,7 +60,14 @@ app.use(async (req, res, next) => {
 // Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const clean = origin.replace(/\/$/, "");
+      if (allowedOrigins.some((o) => o.replace(/\/$/, "") === clean)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS policy violation: Origin not allowed"), false);
+    },
     credentials: true,
   })
 );

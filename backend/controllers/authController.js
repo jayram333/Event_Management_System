@@ -136,7 +136,7 @@ const registerOrganizer = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Organizer registration error:", error);
+    console.error("Organizer registration error:", error.message, error.stack || error);
 
     return res.status(500).json({
       success: false,
@@ -268,7 +268,7 @@ const registerUser = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("User registration error:", error);
+    console.error("User registration error:", error.message, error.stack || error);
 
     return res.status(500).json({
       success: false,
