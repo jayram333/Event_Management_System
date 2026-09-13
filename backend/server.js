@@ -39,6 +39,18 @@ const checkOrigin = (origin, callback) => {
 
 const app = express();
 const server = http.createServer(app);
+
+// CORS middleware MUST run FIRST so OPTIONS preflights get instant headers without DB delay
+app.use(
+  cors({
+    origin: checkOrigin,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
+    optionsSuccessStatus: 204,
+  })
+);
+
 // Socket.IO
 const io = new Server(server, {
   cors: {
@@ -48,6 +60,9 @@ const io = new Server(server, {
   },
 });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Connect MongoDB on app initialization
 connectDB();
 
@@ -56,24 +71,6 @@ app.use(async (req, res, next) => {
   await connectDB();
   next();
 });
-
-// Middleware
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const clean = origin.replace(/\/$/, "");
-      if (allowedOrigins.some((o) => o.replace(/\/$/, "") === clean)) {
-        return callback(null, true);
-      }
-      return callback(new Error("CORS policy violation: Origin not allowed"), false);
-    },
-    credentials: true,
-  })
-);
-
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
