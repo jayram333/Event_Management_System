@@ -264,6 +264,8 @@ export const OrganizerEventDetails = () => {
             <p style={{ fontSize: '1rem', fontWeight: 700, marginTop: '4px' }}>
               <IconCalendar size={16} style={{ display: 'inline', marginRight: '6px' }} />
               {new Date(event.eventDate).toLocaleDateString()}
+              {event.endDate && new Date(event.endDate).toDateString() !== new Date(event.eventDate).toDateString() &&
+                ` - ${new Date(event.endDate).toLocaleDateString()}`}
             </p>
           </div>
 

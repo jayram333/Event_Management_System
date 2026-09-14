@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { IconXCircle } from './Icons';
 
 export const Modal = ({ isOpen, onClose, title, children, maxWidth = '600px' }) => {
@@ -18,7 +19,7 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = '600px' }) 
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
@@ -26,9 +27,10 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = '600px' }) 
         left: 0,
         right: 0,
         bottom: 0,
+        inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(8px)',
-        zIndex: 1000,
+        zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -71,7 +73,8 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = '600px' }) 
         </div>
         <div style={{ padding: '24px', overflowY: 'auto' }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

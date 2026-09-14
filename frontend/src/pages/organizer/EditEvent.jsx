@@ -12,6 +12,7 @@ export const EditEvent = () => {
 
   const [eventName, setEventName] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [numberOfCoordinators, setNumberOfCoordinators] = useState(1);
@@ -23,6 +24,28 @@ export const EditEvent = () => {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState({ text: '', type: 'error' });
 
+  const parseTimeComponents = (timeString) => {
+    if (typeof timeString !== "string") return null;
+    const match = timeString.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return null;
+    let hour = parseInt(match[1], 10);
+    const minute = parseInt(match[2], 10);
+    const period = match[3].toUpperCase();
+    if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+    if (period === "AM" && hour === 12) hour = 0;
+    if (period === "PM" && hour !== 12) hour += 12;
+    return { hour, minute };
+  };
+
+  const getCompleteDateTime = (dateStr, timeStr) => {
+    if (!dateStr || !timeStr) return null;
+    const parts = dateStr.split("-").map(Number);
+    if (parts.length !== 3) return null;
+    const timeComp = parseTimeComponents(timeStr);
+    if (!timeComp) return null;
+    return new Date(parts[0], parts[1] - 1, parts[2], timeComp.hour, timeComp.minute, 0, 0);
+  };
+
   useEffect(() => {
     fetchEvent();
   }, [id]);
@@ -33,8 +56,11 @@ export const EditEvent = () => {
       const res = await eventService.getEventById(id);
       if (res.success && res.data) {
         const ev = res.data;
+        const startDateStr = ev.eventDate ? new Date(ev.eventDate).toISOString().split('T')[0] : '';
+        const endDateStr = ev.endDate ? new Date(ev.endDate).toISOString().split('T')[0] : startDateStr;
         setEventName(ev.eventName || '');
-        setEventDate(ev.eventDate ? new Date(ev.eventDate).toISOString().split('T')[0] : '');
+        setEventDate(startDateStr);
+        setEndDate(endDateStr);
         setStartTime(ev.startTime || '');
         setEndTime(ev.endTime || '');
         setNumberOfCoordinators(ev.numberOfCoordinators || 1);
@@ -112,11 +138,26 @@ export const EditEvent = () => {
       return;
     }
 
+    const finalEndDate = endDate || eventDate;
+    const startDt = getCompleteDateTime(eventDate, startTime);
+    const endDt = getCompleteDateTime(finalEndDate, endTime);
+
+    if (!startDt || !endDt || isNaN(startDt.getTime()) || isNaN(endDt.getTime())) {
+      setMsg({ text: 'Please enter valid dates and times (Format: HH:MM AM/PM).', type: 'error' });
+      return;
+    }
+
+    if (endDt <= startDt) {
+      setMsg({ text: 'End date and time must be after start date and time.', type: 'error' });
+      return;
+    }
+
     try {
       setSaving(true);
       const payload = {
         eventName: eventName.trim(),
         eventDate,
+        endDate: finalEndDate,
         startTime: startTime.trim(),
         endTime: endTime.trim(),
         numberOfCoordinators: Number(numberOfCoordinators),
@@ -189,12 +230,26 @@ export const EditEvent = () => {
 
           <div className="form-grid" style={{ marginBottom: '20px' }}>
             <div className="form-group">
-              <label>Event Date</label>
+              <label>Start Date</label>
               <input
                 type="date"
                 className="form-control"
                 value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
+                onChange={(e) => {
+                  setEventDate(e.target.value);
+                  if (!endDate || endDate === eventDate) setEndDate(e.target.value);
+                }}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>End Date</label>
+              <input
+                type="date"
+                className="form-control"
+                value={endDate || eventDate}
+                onChange={(e) => setEndDate(e.target.value)}
                 required
               />
             </div>

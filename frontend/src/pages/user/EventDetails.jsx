@@ -231,6 +231,8 @@ export const EventDetails = () => {
             <p style={{ fontSize: '1rem', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <IconCalendar size={18} style={{ color: 'var(--primary)' }} />
               {new Date(event.eventDate).toLocaleDateString()}
+              {event.endDate && new Date(event.endDate).toDateString() !== new Date(event.eventDate).toDateString() &&
+                ` - ${new Date(event.endDate).toLocaleDateString()}`}
             </p>
           </div>
 
