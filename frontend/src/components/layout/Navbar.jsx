@@ -76,13 +76,13 @@ export const Navbar = ({ onToggleSidebar }) => {
           >
             E
           </div>
-          <span style={{ fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.02em' }} className="gradient-text">
+          <span style={{ fontWeight: '800', fontSize: '1.1rem', letterSpacing: '-0.02em' }} className="gradient-text navbar-logo-text">
             Event Management System
           </span>
         </Link>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="navbar-right">
         <NotificationCenter />
         {getRoleBadge()}
 
@@ -127,9 +127,10 @@ export const Navbar = ({ onToggleSidebar }) => {
             fontWeight: '600',
             transition: 'all 0.2s',
           }}
+          className="logout-btn"
         >
           <IconLogOut size={16} />
-          <span>Logout</span>
+          <span className="logout-text">Logout</span>
         </button>
       </div>
     </header>

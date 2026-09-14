@@ -238,6 +238,7 @@ const createEvent = async (req, res) => {
 
     let currentTime = eventStartMinutes;
     let totalTaskMinutes = 0;
+    let maxTaskEndMinutes = eventEndMinutes;
 
     const formattedTasks = [];
 
@@ -282,23 +283,10 @@ const createEvent = async (req, res) => {
       }
 
       const taskStartMinutes = currentTime;
-      const taskEndMinutes =
-        currentTime + duration;
+      const taskEndMinutes = currentTime + duration;
 
-      if (taskEndMinutes > eventEndMinutes) {
-        return res.status(400).json({
-          success: false,
-          message:
-            `Task "${task.taskName}" exceeds the event end time`,
-          details: {
-            eventEndTime:
-              formatTime(eventEndMinutes),
-            taskStartTime:
-              formatTime(taskStartMinutes),
-            taskDuration:
-              `${duration} minutes`,
-          },
-        });
+      if (taskEndMinutes > maxTaskEndMinutes) {
+        maxTaskEndMinutes = taskEndMinutes;
       }
 
       formattedTasks.push({
@@ -353,11 +341,16 @@ const createEvent = async (req, res) => {
     // CREATE EVENT
     // =====================================================
 
+    const finalEndTime =
+      maxTaskEndMinutes > eventEndMinutes
+        ? formatTime(maxTaskEndMinutes)
+        : endTime.trim();
+
     const event = await Event.create({
       eventName: eventName.trim(),
       eventDate,
       startTime: startTime.trim(),
-      endTime: endTime.trim(),
+      endTime: finalEndTime,
       numberOfCoordinators:
         Number(numberOfCoordinators),
       eventPlace: eventPlace.trim(),
@@ -437,6 +430,10 @@ const getOrganizerEvents = async (req, res) => {
         select: "_id fullName email phone",
       })
       .populate({
+        path: "joinRequests.user",
+        select: "_id fullName email phone",
+      })
+      .populate({
         path: "tasks.coordinator",
         select: "_id fullName email phone",
       })
@@ -478,6 +475,10 @@ const getEventById = async (req, res) => {
       })
       .populate({
         path: "coordinators",
+        select: "_id fullName email phone",
+      })
+      .populate({
+        path: "joinRequests.user",
         select: "_id fullName email phone",
       })
       .populate({
@@ -597,7 +598,7 @@ const getEventCoordinators = async (req, res) => {
   try {
     const event = await findEventForManagement(req.params.id, req.user, {
       path: "coordinators",
-      select: "_id fullName email phone",
+      select: "_id fullName email phone isEmailVerified",
     });
 
     if (!event) {
@@ -607,10 +608,14 @@ const getEventCoordinators = async (req, res) => {
       });
     }
 
+    const verifiedCoordinators = (event.coordinators || []).filter(
+      (u) => u && u.isEmailVerified === true
+    );
+
     return res.status(200).json({
       success: true,
-      count: event.coordinators.length,
-      data: event.coordinators,
+      count: verifiedCoordinators.length,
+      data: verifiedCoordinators,
     });
   } catch (error) {
     console.error("Get event coordinators error:", error);
@@ -837,6 +842,13 @@ const approveJoinRequest = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "User not found",
+      });
+    }
+
+    if (user.isEmailVerified !== true) {
+      return res.status(400).json({
+        success: false,
+        message: "Only email-verified users can be approved as event coordinators",
       });
     }
 
@@ -1247,26 +1259,10 @@ const updateTask = async (req, res) => {
       }
 
       const taskStartMinutes = currentTime;
+      const taskEndMinutes = currentTime + taskDuration;
 
-      const taskEndMinutes =
-        currentTime + taskDuration;
-
-      if (taskEndMinutes > eventEndMinutes) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Updated task durations exceed the event end time",
-          details: {
-            eventEndTime:
-              formatTime(eventEndMinutes),
-            task:
-              currentTask.taskName,
-            taskStartTime:
-              formatTime(taskStartMinutes),
-            taskDuration:
-              `${taskDuration} minutes`,
-          },
-        });
+      if (taskEndMinutes > maxTaskEndMinutes) {
+        maxTaskEndMinutes = taskEndMinutes;
       }
 
       currentTask.startTime =
@@ -1278,6 +1274,10 @@ const updateTask = async (req, res) => {
       currentTime = taskEndMinutes;
 
       totalTaskMinutes += taskDuration;
+    }
+
+    if (maxTaskEndMinutes > eventEndMinutes) {
+      event.endTime = formatTime(maxTaskEndMinutes);
     }
 
     await event.save();
@@ -1380,6 +1380,13 @@ const assignCoordinatorToTask = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "User not found",
+      });
+    }
+
+    if (user.isEmailVerified !== true) {
+      return res.status(400).json({
+        success: false,
+        message: "Only email-verified users can be assigned as task coordinators",
       });
     }
 
@@ -1558,6 +1565,7 @@ const updateEvent = async (req, res) => {
 
       let currentTime = eventStartMinutes;
       let totalTaskMinutes = 0;
+      let maxTaskEndMinutes = eventEndMinutes;
 
       const formattedTasks = [];
 
@@ -1595,21 +1603,11 @@ const updateEvent = async (req, res) => {
           });
         }
 
-        const taskStartMinutes =
-          currentTime;
+        const taskStartMinutes = currentTime;
+        const taskEndMinutes = currentTime + duration;
 
-        const taskEndMinutes =
-          currentTime + duration;
-
-        if (
-          taskEndMinutes >
-          eventEndMinutes
-        ) {
-          return res.status(400).json({
-            success: false,
-            message:
-              `Task "${task.taskName}" exceeds the event end time`,
-          });
+        if (taskEndMinutes > maxTaskEndMinutes) {
+          maxTaskEndMinutes = taskEndMinutes;
         }
 
         let coordinatorId = null;
@@ -1686,6 +1684,10 @@ const updateEvent = async (req, res) => {
       }
 
       event.tasks = formattedTasks;
+
+      if (maxTaskEndMinutes > eventEndMinutes) {
+        event.endTime = formatTime(maxTaskEndMinutes);
+      }
     }
 
     await event.save();

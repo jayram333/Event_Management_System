@@ -105,9 +105,9 @@ export const JoinRequestsPage = () => {
               {pendingRequests.map((item, idx) => (
                 <tr key={item.reqId || idx}>
                   <td style={{ fontWeight: '700' }}>
-                    {item.user?.fullName || 'User'}
+                    {item.user?.fullName || item.user?.name || (typeof item.user === 'object' ? 'Unknown User' : 'User')}
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: '400' }}>
-                      {item.user?.email} • {item.user?.phone || 'N/A'}
+                      {item.user?.email ? `${item.user.email}${item.user.phone ? ` • ${item.user.phone}` : ''}` : ''}
                     </div>
                   </td>
                   <td>

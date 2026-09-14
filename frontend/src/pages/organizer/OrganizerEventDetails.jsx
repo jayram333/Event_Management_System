@@ -520,11 +520,13 @@ export const OrganizerEventDetails = () => {
               required
             >
               <option value="">-- Choose Approved Coordinator --</option>
-              {coordinators.map((c) => (
-                <option key={c._id} value={c._id}>
-                  {c.fullName} ({c.email})
-                </option>
-              ))}
+              {coordinators
+                .filter((c) => c && c.isEmailVerified === true)
+                .map((c) => (
+                  <option key={c._id} value={c._id}>
+                    {c.fullName} ({c.email})
+                  </option>
+                ))}
             </select>
           </div>
 
